@@ -40,7 +40,10 @@ pythonpath = ['.']
 addopts = ['-p', 'no:warnings', '--cov=fast_zero', '--cov-context=test']
 
 [tool.poe.tasks]
-lint = "ruff check"
+lint.sequence = [
+  { cmd = "typos --write-changes" },
+  { cmd = "ruff check" },
+]
 format.sequence = [
   { cmd = "ruff check --fix" },
   { cmd = "ruff format" },
