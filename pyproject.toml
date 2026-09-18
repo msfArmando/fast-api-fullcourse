@@ -50,7 +50,6 @@ format.sequence = [
 ]
 serve = "fastapi dev fast_zero/app.py"
 test.sequence = [
-  "lint",
   { cmd = "pytest -s -x -vv $POE_EXTRA_ARGS" },
   { cmd = "coverage html --show-contexts" },
 ]

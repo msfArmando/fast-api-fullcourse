@@ -21,3 +21,22 @@ def test_root_should_return_html_and_ok():
 
     assert response.status_code == HTTPStatus.OK
     assert 'Hello, World!' in response.text
+
+def test_create_user():
+    client = TestClient(app)
+    response = client.post(
+        url='/user/',
+        json={
+            'email': 'armandomonsaof@gmail.com',
+            'username': 'armandomonsao',
+            'password': 'password123',
+        }
+    )
+
+    assert response.status_code == HTTPStatus.CREATED
+    assert response.json() == {
+        'email': 'armandomonsaof@gmail.com',
+        'username': 'armandomonsao',
+        'id': 1,
+    }
+

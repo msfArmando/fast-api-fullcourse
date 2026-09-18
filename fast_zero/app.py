@@ -4,11 +4,12 @@ from fastapi import FastAPI
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import HTMLResponse
 
-from fast_zero.schema import PublicUser, ReadRoot, UserSchema
+from fast_zero.schema import PublicUser, ReadRoot, UserSchema, UserDB
 
 app = FastAPI(title='Cursor - FastAPI', docs_url=None, redoc_url=None)
 icon_url = 'https://avatars.githubusercontent.com/u/155389551?s=200&v=4'
 
+database = []
 
 @app.get('/docs', include_in_schema=False)
 def overridden_swagger():
@@ -52,4 +53,8 @@ def read_root_html():
 
 @app.post('/user', status_code=HTTPStatus.CREATED, response_model=PublicUser)
 def create_user(user: UserSchema):
-    return user
+    #user_with_id = UserDB(email=user.email, username=user.username, password=user.password, id=len(database) + 1)
+    # Aqui aprendi a importância do kwargs
+    user_with_id = UserDB(**user.model_dump(), id=len(database) + 1)
+    database.append(user_with_id)
+    return user_with_id
