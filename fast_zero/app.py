@@ -9,7 +9,7 @@ from fast_zero.schema import PublicUser, ReadRoot, UserDB, UserList, UserSchema
 app = FastAPI(title='Cursor - FastAPI', docs_url=None, redoc_url=None)
 icon_url = 'https://avatars.githubusercontent.com/u/155389551?s=200&v=4'
 
-database = []
+database: list[UserDB] = []
 
 
 @app.get('/docs', include_in_schema=False)
@@ -93,3 +93,13 @@ def deleta_user(userid: int):
     del database[userid - 1]
 
     return {'message': 'User deleted'}
+
+
+@app.get('/user/{userid}', response_model=PublicUser)
+def get_user_by_id(userid: int) -> UserDB:
+    if userid > len(database) or userid <= 0:
+        raise HTTPException(
+            HTTPStatus.NOT_FOUND, detail='Usuário não encontrado.'
+        )
+
+    return database[userid - 1]
