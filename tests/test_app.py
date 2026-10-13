@@ -114,7 +114,7 @@ def test_delete_404_error(client):
     response = client.delete(url='/user/3')
 
     assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail': 'Usuário não encontrado'}
+    assert response.json() == {'detail': 'Usuário não encontrado.'}
 
 
 def test_get_by_id(client):
@@ -132,4 +132,4 @@ def test_get_by_id_404(client):
     response = client.get(url='/user/777')
 
     assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail': 'Usuário não encontrado'}
+    assert response.json() == {'detail': 'Usuário não encontrado.'}
