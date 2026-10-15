@@ -11,12 +11,17 @@ from fast_zero.models import table_registry
 
 
 # O context manager serve para usar uma função como with
+<<<<<<< HEAD
 @contextmanager
 # Recebe um modelo, que receberá um evento posteriormente,
+=======
+# Recebe um modelo, que receberá um evento posteriormente, 
+>>>>>>> 2e3162515ab4c35f3578d3717006c4111f2fbd41
 # e define por padrão a data que será definida no atributo created_at
+@contextmanager
 def _mock_db_time(*, model, time=datetime(2026, 1, 1)):
 
-    def fake_time_hook(target):
+    def fake_time_hook(mapper, connection, target):
         if hasattr(target, 'created_at'):
             target.created_at = time
 
@@ -31,7 +36,7 @@ def _mock_db_time(*, model, time=datetime(2026, 1, 1)):
 
 @pytest.fixture
 def mock_db_time():
-    return mock_db_time
+    return _mock_db_time
 
 
 @pytest.fixture
