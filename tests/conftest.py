@@ -9,15 +9,6 @@ from sqlalchemy.orm import Session
 from fast_zero.app import app
 from fast_zero.models import table_registry
 
-
-# O context manager serve para usar uma função como with
-<<<<<<< HEAD
-@contextmanager
-# Recebe um modelo, que receberá um evento posteriormente,
-=======
-# Recebe um modelo, que receberá um evento posteriormente, 
->>>>>>> 2e3162515ab4c35f3578d3717006c4111f2fbd41
-# e define por padrão a data que será definida no atributo created_at
 @contextmanager
 def _mock_db_time(*, model, time=datetime(2026, 1, 1)):
 
