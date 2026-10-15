@@ -1,6 +1,7 @@
-import pytest
 from contextlib import contextmanager
 from datetime import datetime
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
@@ -8,9 +9,10 @@ from sqlalchemy.orm import Session
 from fast_zero.app import app
 from fast_zero.models import table_registry
 
+
 # O context manager serve para usar uma função como with
 @contextmanager
-# Recebe um modelo, que receberá um evento posteriormente, 
+# Recebe um modelo, que receberá um evento posteriormente,
 # e define por padrão a data que será definida no atributo created_at
 def _mock_db_time(*, model, time=datetime(2026, 1, 1)):
 
@@ -18,16 +20,19 @@ def _mock_db_time(*, model, time=datetime(2026, 1, 1)):
         if hasattr(target, 'created_at'):
             target.created_at = time
 
-    # Adiciona um evento, no modelo, antes de inserir, para definir o valor fake do time
+    # Adiciona um evento, no modelo,
+    # antes de inserir, para definir o valor fake do time
     event.listen(model, 'before_insert', fake_time_hook)
-    # Retorna o time mockado e aguarda ele terminar de ser usado
+    # Retorna o time mockado e aguarda ele terminar de set usado
     yield time
     # Remove o evento do modelo
     event.remove(model, 'before_insert', fake_time_hook)
 
+
 @pytest.fixture
 def mock_db_time():
     return mock_db_time
+
 
 @pytest.fixture
 def client():
