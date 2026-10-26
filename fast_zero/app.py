@@ -3,7 +3,7 @@ from http import HTTPStatus
 
 # importando FastAPI para inicializar o app,
 #  com a HTTPException para tratamentos de exceções
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 
 # Importando html do redoc e do swagger para customização
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
@@ -11,6 +11,11 @@ from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 # Importando class HTMLResponse do módulo de responses,
 #  para responses em formato de HTML
 from fastapi.responses import HTMLResponse
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from fast_zero.database import get_session
+from fast_zero.models import User
 
 # Importação de schemas
 from fast_zero.schema import PublicUser, ReadRoot, UserDB, UserList, UserSchema
@@ -68,51 +73,71 @@ def read_root_html():
     """
 
 
+# USAR NO TRAMPO: SCALAR E DEPENDS
+
+
 # Rota post para criação de usuários. O retorno de status é diferente,
 # é de created. O modelo é diferente, é o schema PublicUser,
 #  que remove o password do retorno
 @app.post('/user', status_code=HTTPStatus.CREATED, response_model=PublicUser)
-def create_user(user: UserSchema):
-    # Criando objeto da class UserDB com as informações
-    # passadas no schema do input, o id é dinamico,
-    # somando o tamanho do banco de dados + 1
-    """user_with_id = UserDB(email=user.email,
-        username=user.username, password=user.password,
-        id=len(database) + 1)
-    Aqui aprendi a importância do kwargs"""
-    user_with_id = UserDB(**user.model_dump(), id=len(database) + 1)
-    # Adiciona na lista (db) o usuário, UserDB criado,
-    # mas retorna em formato de publicuser,
-    # Sem password
-    # o UserDB herda o schema UserSchema, só tem como adicional o campo ID.
-    database.append(user_with_id)
-    return user_with_id
+def create_user(user: UserSchema, session: Session = Depends(get_session)):
+    db_user = session.scalar(
+        select(User).where(
+            (User.username == user.username) | (User.email == user.email)
+        )
+    )
+
+    if db_user:
+        if db_user.username == user.username:
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT,
+                detail='Username already exists',
+            )
+        elif db_user.email == user.email:
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT,
+                detail='Email already exists',
+            )
+
+    db_user = User(
+        username=user.username, password=user.password, email=user.email
+    )
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+
+    return db_user
 
 
 # Rota para retornar lista de usuários
 @app.get('/user', status_code=HTTPStatus.OK, response_model=UserList)
-def read_user():
-    return {'users': database}
+def read_user(
+    skip: int = 0, limit: int = 100, session: Session = Depends(get_session)
+):
+    users = session.scalars(select(User).offset(skip).limit(limit)).all()
+    return {'users': users}
 
 
 # rota para atualizar registro
 @app.put(
     '/user/{userid}', status_code=HTTPStatus.OK, response_model=PublicUser
 )
-def update_user(userid: int, user: UserSchema):
-    # Validação de ID. Se for maior do que o tamanho do banco ou menor que 0,
-    # retorna uma exceção HTTP 404
-    if userid > len(database) or userid < 0:
+def update_user(
+    userid: int, user: UserSchema, session: Session = Depends(get_session)
+):
+    db_user = session.scalar(select(User).where(User.id == userid))
+    if not db_user:
         raise HTTPException(
-            HTTPStatus.NOT_FOUND, detail='Usuário não encontrado.'
+            status_code=HTTPStatus.NOT_FOUND, detail='User not found'
         )
 
-    # Localiza o índice e altera por um novo objeto UserDB
-    user_with_id = UserDB(**user.model_dump(), id=userid)
-    database[userid - 1] = user_with_id
+    db_user.username = user.username
+    db_user.password = user.password
+    db_user.email = user.email
+    session.commit()
+    session.refresh(db_user)
 
-    # Retorna o novo usuário. Com a exibição da senha.
-    return user_with_id
+    return db_user
 
 
 # Rota com a mesma lógica de validação da rota de update, porém, deleta.

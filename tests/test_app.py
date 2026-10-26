@@ -1,4 +1,8 @@
+# PAREI EM: Mesmo sem escrever nenhum assert nesse teste, se executarmos os testes, ele falhará
+
 from http import HTTPStatus
+
+from fast_zero.schema import PublicUser
 
 
 def test_root_should_return_ok_and_hello_world(client):
@@ -19,62 +23,36 @@ def test_root_should_return_html_and_ok(client):
 
 def test_create_user(client):
     response = client.post(
-        url='/user/',
+        '/user',
         json={
-            'email': 'armandomonsaof@gmail.com',
-            'username': 'armandomonsao',
-            'password': 'password123',
+            'username': 'alice',
+            'email': 'alice@example.com',
+            'password': 'secret',
         },
     )
-
     assert response.status_code == HTTPStatus.CREATED
     assert response.json() == {
-        'email': 'armandomonsaof@gmail.com',
-        'username': 'armandomonsao',
+        'username': 'alice',
+        'email': 'alice@example.com',
         'id': 1,
     }
 
 
-def test_create_user_2(client):
-    response = client.post(
-        url='/user/',
-        json={
-            'email': 'armando22@gmail.com',
-            'username': 'armandomonsao2',
-            'password': 'password1234',
-        },
-    )
-
-    assert response.status_code == HTTPStatus.CREATED
-    assert response.json() == {
-        'email': 'armando22@gmail.com',
-        'username': 'armandomonsao2',
-        'id': 2,
-    }
-
-
-def test_read_user(client):
-    response = client.get('/user/')
+def test_read_users(client):
+    response = client.get('/user')
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == {
-        'users': [
-            {
-                'email': 'armandomonsaof@gmail.com',
-                'username': 'armandomonsao',
-                'id': 1,
-            },
-            {
-                'email': 'armando22@gmail.com',
-                'username': 'armandomonsao2',
-                'id': 2,
-            },
-        ]
-    }
+    assert response.json() == {'users': []}
 
 
-def test_update_user(client):
+def test_read_users_with_users(client, user):
+    user_schema = PublicUser.model_validate(user).model_dump()
+    response = client.get('/user/')
+    assert response.json() == {'users': [user_schema]}
+
+
+def test_update_user(client, user):
     response = client.put(
-        url='/user/1',
+        url=f'/user/{user.id}',
         json={
             'email': 'testuser@gmail.com',
             'username': 'armandomonsaotest',
@@ -102,6 +80,24 @@ def test_update_404_error(client):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
+def test_update_integrity_error(client, user):
+    client.post(
+        '/user',
+        json={
+            'username': 'fausto',
+            'email': 'fausto@example.com',
+            'password': 'secret',
+        },
+    )
+
+    response_update = client.put(
+        f'/user/{user.id}',
+        json={
+            'username': 'fausto',
+            'email': 'bob@example.com',
+            'password': 'mynewpassword',
+        },
+    )
 
 def test_delete_user(client):
     response = client.delete(url='/user/1')

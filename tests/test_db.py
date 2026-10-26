@@ -32,4 +32,5 @@ def test_create_user(session, mock_db_time):
         'email': 'armandomonsaof@gmail.com',
         'password': 'password123',
         'created_at': time,
+        'update_at': time,
     }
