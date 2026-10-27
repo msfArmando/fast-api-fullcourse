@@ -13,6 +13,7 @@ from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from fast_zero.database import get_session
 from fast_zero.models import User
@@ -131,13 +132,20 @@ def update_user(
             status_code=HTTPStatus.NOT_FOUND, detail='User not found'
         )
 
-    db_user.username = user.username
-    db_user.password = user.password
-    db_user.email = user.email
-    session.commit()
-    session.refresh(db_user)
+    try:
+        db_user.username = user.username
+        db_user.password = user.password
+        db_user.email = user.email
+        session.commit()
+        session.refresh(db_user)
 
-    return db_user
+        return db_user
+    except IntegrityError:
+        raise HTTPException(
+            status_code=HTTPStatus.CONFLICT,
+            detail='Username or Email already exists'
+        )
+    
 
 
 # Rota com a mesma lógica de validação da rota de update, porém, deleta.

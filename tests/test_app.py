@@ -1,4 +1,4 @@
-# PAREI EM: Mesmo sem escrever nenhum assert nesse teste, se executarmos os testes, ele falhará
+# PAREI EM: Modificando o Endpoint DELETE /users
 
 from http import HTTPStatus
 
@@ -98,6 +98,11 @@ def test_update_integrity_error(client, user):
             'password': 'mynewpassword',
         },
     )
+
+    assert response_update.status_code == HTTPStatus.CONFLICT
+    assert response_update.json() == {
+        'detail': 'Username or Email already exists'
+    }
 
 def test_delete_user(client):
     response = client.delete(url='/user/1')
