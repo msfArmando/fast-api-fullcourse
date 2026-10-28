@@ -5,7 +5,7 @@ from sqlalchemy import select
 from fast_zero.models import User
 
 
-def test_create_user(session, mock_db_time):
+def test_create_user(sessiontest, mock_db_time):
     # Inicia a função sendo gerenciada dentro de um with,
     # e retorna o valor da data mockada já no time.
     with mock_db_time(model=User) as time:
@@ -18,11 +18,11 @@ def test_create_user(session, mock_db_time):
             password='password123',
         )
         # Persiste o objeto na sessão
-        session.add(new_user)
+        sessiontest.add(new_user)
         # Executa o insert de fato e ativa o evento
-        session.commit()
+        sessiontest.commit()
 
-    user = session.scalar(select(User).where(User.username == 'bigmonsa'))
+    user = sessiontest.scalar(select(User).where(User.username == 'bigmonsa'))
 
     # Transforma o resultado da consulta acima
     # em dicionário e faz as comparações

@@ -11,7 +11,7 @@ from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 # Importando class HTMLResponse do módulo de responses,
 #  para responses em formato de HTML
 from fastapi.responses import HTMLResponse
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -150,15 +150,20 @@ def update_user(
 
 # Rota com a mesma lógica de validação da rota de update, porém, deleta.
 @app.delete('/user/{userid}', response_model=ReadRoot)
-def deleta_user(userid: int):
-    if userid > len(database) or userid < 0:
+def deleta_user(userid: int, session: Session = Depends(get_session)):
+    db_user = session.scalar(select(User).where(User.id == userid))
+    if not db_user:
         raise HTTPException(
-            HTTPStatus.NOT_FOUND, detail='Usuário não encontrado.'
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='User not found'
         )
 
-    del database[userid - 1]
+    session.delete(db_user)
+    session.commit()
 
-    return {'message': 'User deleted'}
+    return {
+        'message': 'User deleted'
+    }
 
 
 # Rota para buscar usuário específico
