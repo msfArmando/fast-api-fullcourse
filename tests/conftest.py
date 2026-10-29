@@ -63,6 +63,11 @@ def sessiontest():
 
 
 @pytest.fixture
+def db_session():
+    conn: Session = get_session()
+    yield conn
+
+@pytest.fixture
 def user(sessiontest):
     user = User(
         username='Teste', email='teste@test.com', password='testpassword'
@@ -72,3 +77,4 @@ def user(sessiontest):
     sessiontest.refresh(user)
 
     return user
+

@@ -3,6 +3,9 @@
 from http import HTTPStatus
 
 from fast_zero.schema import PublicUser
+from sqlalchemy import select, text
+from fast_zero.database import get_session
+from sqlalchemy.orm import Session
 
 
 def test_root_should_return_ok_and_hello_world(client):
@@ -80,6 +83,32 @@ def test_update_404_error(client):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
+def test_post_already_exists_username(client, user):
+    response = client.post(
+        '/user',
+        json={
+            'username': user.username,
+            'email': 'testedev@testdev.com',
+            'password': user.password,
+        },
+    )
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == { 'detail': 'Username already exists' }
+
+def test_post_already_exists_email(client, user):
+    response = client.post(
+        '/user',
+        json={
+            'username': 'Testedev',
+            'email': user.email,
+            'password': user.password,
+        },
+    )
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == { 'detail': 'Email already exists' }
+
 def test_update_integrity_error(client, user):
     client.post(
         '/user',
@@ -111,26 +140,37 @@ def test_delete_user(client, user):
     assert response.json() == { 'message': 'User deleted' }
 
 
-# def test_delete_404_error(client):
-#     response = client.delete(url='/user/3')
+def test_delete_404_error(client):
+    response = client.delete(url='/user/3')
 
-#     assert response.status_code == HTTPStatus.NOT_FOUND
-#     assert response.json() == {'detail': 'Usuário não encontrado.'}
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'User not found'}
+
+def test_api_docs(client):
+    response = client.get(url='/docs')
+
+    assert response.status_code == HTTPStatus.OK
+
+def test_api_redoc(client):
+    response = client.get(url='/redoc')
+
+    assert response.status_code == HTTPStatus.OK
 
 
-# def test_get_by_id(client):
-#     response = client.get(url='/user/1')
+def test_get_by_id(client, user):
+    response = client.get(url=f'/user/{user.id}')
 
-#     assert response.status_code == HTTPStatus.OK
-#     assert response.json() == {
-#         'email': 'armando22@gmail.com',
-#         'username': 'armandomonsao2',
-#         'id': 2,
-#     }
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'id': 1, 
+        'email': 'teste@test.com', 
+        'username': 'Teste'
+    }
 
 
-# def test_get_by_id_404(client):
-#     response = client.get(url='/user/777')
+def test_get_by_id_404(client):
+    response = client.get(url='/user/777')
 
-#     assert response.status_code == HTTPStatus.NOT_FOUND
-#     assert response.json() == {'detail': 'Usuário não encontrado.'}
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'User not found'}
+

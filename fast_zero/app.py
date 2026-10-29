@@ -88,26 +88,25 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
         )
     )
 
-    if db_user:
-        if db_user.username == user.username:
+    if db_user and db_user.username == user.username:
             raise HTTPException(
                 status_code=HTTPStatus.CONFLICT,
                 detail='Username already exists',
             )
-        elif db_user.email == user.email:
+    elif db_user and db_user.email == user.email:
             raise HTTPException(
                 status_code=HTTPStatus.CONFLICT,
                 detail='Email already exists',
             )
+    else:
+        db_user = User(
+            username=user.username, password=user.password, email=user.email
+        )
+        session.add(db_user)
+        session.commit()
+        session.refresh(db_user)
 
-    db_user = User(
-        username=user.username, password=user.password, email=user.email
-    )
-    session.add(db_user)
-    session.commit()
-    session.refresh(db_user)
-
-    return db_user
+        return db_user
 
 
 # Rota para retornar lista de usuários
@@ -147,8 +146,6 @@ def update_user(
         )
     
 
-
-# Rota com a mesma lógica de validação da rota de update, porém, deleta.
 @app.delete('/user/{userid}', response_model=ReadRoot)
 def deleta_user(userid: int, session: Session = Depends(get_session)):
     db_user = session.scalar(select(User).where(User.id == userid))
@@ -168,10 +165,13 @@ def deleta_user(userid: int, session: Session = Depends(get_session)):
 
 # Rota para buscar usuário específico
 @app.get('/user/{userid}', response_model=PublicUser)
-def get_user_by_id(userid: int) -> UserDB:
-    if userid > len(database) or userid <= 0:
-        raise HTTPException(
-            HTTPStatus.NOT_FOUND, detail='Usuário não encontrado.'
-        )
+def get_user_by_id(userid: int, session: Session = Depends(get_session)) -> PublicUser:
+    db_user = session.scalar(select(User).where(User.id == userid))
 
-    return database[userid - 1]
+    if db_user:
+        return db_user
+    else:
+        raise HTTPException(
+            status_code = HTTPStatus.NOT_FOUND,
+            detail='User not found'
+        )
