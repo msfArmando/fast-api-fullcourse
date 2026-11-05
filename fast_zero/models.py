@@ -20,7 +20,10 @@ class User:
         init=False, server_default=func.now()
     )
     update_at: Mapped[datetime] = mapped_column(
-        init=False, onupdate=func.now(), server_default=func.now()
+        init=False,
+        onupdate=func.now(),
+        server_default=func.now(),
+        nullable=False
     )
 
 

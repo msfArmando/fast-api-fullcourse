@@ -11,9 +11,9 @@ from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 # Importando class HTMLResponse do módulo de responses,
 #  para responses em formato de HTML
 from fastapi.responses import HTMLResponse
-from sqlalchemy import select, delete
-from sqlalchemy.orm import Session
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from fast_zero.database import get_session
 from fast_zero.models import User
@@ -89,15 +89,15 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
     )
 
     if db_user and db_user.username == user.username:
-            raise HTTPException(
-                status_code=HTTPStatus.CONFLICT,
-                detail='Username already exists',
-            )
+        raise HTTPException(
+            status_code=HTTPStatus.CONFLICT,
+            detail='Username already exists',
+        )
     elif db_user and db_user.email == user.email:
-            raise HTTPException(
-                status_code=HTTPStatus.CONFLICT,
-                detail='Email already exists',
-            )
+        raise HTTPException(
+            status_code=HTTPStatus.CONFLICT,
+            detail='Email already exists',
+        )
     else:
         db_user = User(
             username=user.username, password=user.password, email=user.email
@@ -142,36 +142,34 @@ def update_user(
     except IntegrityError:
         raise HTTPException(
             status_code=HTTPStatus.CONFLICT,
-            detail='Username or Email already exists'
+            detail='Username or Email already exists',
         )
-    
+
 
 @app.delete('/user/{userid}', response_model=ReadRoot)
 def deleta_user(userid: int, session: Session = Depends(get_session)):
     db_user = session.scalar(select(User).where(User.id == userid))
     if not db_user:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail='User not found'
+            status_code=HTTPStatus.NOT_FOUND, detail='User not found'
         )
 
     session.delete(db_user)
     session.commit()
 
-    return {
-        'message': 'User deleted'
-    }
+    return {'message': 'User deleted'}
 
 
 # Rota para buscar usuário específico
 @app.get('/user/{userid}', response_model=PublicUser)
-def get_user_by_id(userid: int, session: Session = Depends(get_session)) -> PublicUser:
+def get_user_by_id(
+    userid: int, session: Session = Depends(get_session)
+) -> PublicUser:
     db_user = session.scalar(select(User).where(User.id == userid))
 
     if db_user:
         return db_user
     else:
         raise HTTPException(
-            status_code = HTTPStatus.NOT_FOUND,
-            detail='User not found'
+            status_code=HTTPStatus.NOT_FOUND, detail='User not found'
         )

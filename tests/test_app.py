@@ -3,9 +3,6 @@
 from http import HTTPStatus
 
 from fast_zero.schema import PublicUser
-from sqlalchemy import select, text
-from fast_zero.database import get_session
-from sqlalchemy.orm import Session
 
 
 def test_root_should_return_ok_and_hello_world(client):
@@ -83,6 +80,7 @@ def test_update_404_error(client):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
+
 def test_post_already_exists_username(client, user):
     response = client.post(
         '/user',
@@ -94,7 +92,8 @@ def test_post_already_exists_username(client, user):
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json() == { 'detail': 'Username already exists' }
+    assert response.json() == {'detail': 'Username already exists'}
+
 
 def test_post_already_exists_email(client, user):
     response = client.post(
@@ -107,7 +106,8 @@ def test_post_already_exists_email(client, user):
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json() == { 'detail': 'Email already exists' }
+    assert response.json() == {'detail': 'Email already exists'}
+
 
 def test_update_integrity_error(client, user):
     client.post(
@@ -133,11 +133,12 @@ def test_update_integrity_error(client, user):
         'detail': 'Username or Email already exists'
     }
 
+
 def test_delete_user(client, user):
     response = client.delete(url=f'/user/{user.id}')
 
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == { 'message': 'User deleted' }
+    assert response.json() == {'message': 'User deleted'}
 
 
 def test_delete_404_error(client):
@@ -146,10 +147,12 @@ def test_delete_404_error(client):
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
 
+
 def test_api_docs(client):
     response = client.get(url='/docs')
 
     assert response.status_code == HTTPStatus.OK
+
 
 def test_api_redoc(client):
     response = client.get(url='/redoc')
@@ -162,9 +165,9 @@ def test_get_by_id(client, user):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
-        'id': 1, 
-        'email': 'teste@test.com', 
-        'username': 'Teste'
+        'id': 1,
+        'email': 'teste@test.com',
+        'username': 'Teste',
     }
 
 
@@ -173,4 +176,3 @@ def test_get_by_id_404(client):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
-

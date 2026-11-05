@@ -65,7 +65,8 @@ def sessiontest():
 @pytest.fixture
 def db_session():
     conn: Session = get_session()
-    yield conn
+    return conn
+
 
 @pytest.fixture
 def user(sessiontest):
@@ -77,4 +78,3 @@ def user(sessiontest):
     sessiontest.refresh(user)
 
     return user
-
