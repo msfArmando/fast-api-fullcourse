@@ -23,7 +23,7 @@ class User:
         init=False,
         onupdate=func.now(),
         server_default=func.now(),
-        nullable=False
+        nullable=False,
     )
 
 

@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from fast_zero.app import app
 from fast_zero.database import get_session
 from fast_zero.models import User, table_registry
+from fast_zero.security import create_access_token, get_password_hash
 
 
 @contextmanager
@@ -70,11 +71,39 @@ def db_session():
 
 @pytest.fixture
 def user(sessiontest):
+    password = 'testpassword'
     user = User(
-        username='Teste', email='teste@test.com', password='testpassword'
+        username='Teste',
+        email='teste@test.com',
+        password=get_password_hash(password),
     )
     sessiontest.add(user)
     sessiontest.commit()
     sessiontest.refresh(user)
 
+    setattr(user, 'clean_password', password)
+
     return user
+
+
+@pytest.fixture
+def token(client, user):
+    response = client.post(
+        '/token',
+        data={
+            'username': user.email,
+            'password': getattr(user, 'clean_password'),
+        },
+    )
+
+    return response.json()['access_token']
+
+
+@pytest.fixture
+def token_without_email():
+    return create_access_token(data={'sub': ''})
+
+
+@pytest.fixture
+def token_with_other_email():
+    return create_access_token(data={'sub': 'teste22@test.com'})

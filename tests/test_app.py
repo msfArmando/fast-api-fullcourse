@@ -1,15 +1,12 @@
-# PAREI EM: Modificando o Endpoint DELETE /users
-
+from datetime import datetime
 from http import HTTPStatus
 
 from fast_zero.schema import PublicUser
 
 
 def test_root_should_return_ok_and_hello_world(client):
-    # act
     response = client.get('/')
 
-    # assert
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'Hello, World!'}
 
@@ -30,11 +27,18 @@ def test_create_user(client):
             'password': 'secret',
         },
     )
+
+    response_api = client.get(url='/user/1')
+
+    response_user = response_api.json()
+
     assert response.status_code == HTTPStatus.CREATED
     assert response.json() == {
         'username': 'alice',
         'email': 'alice@example.com',
         'id': 1,
+        'created_at': response_user['created_at'],
+        'update_at': response_user['update_at'],
     }
 
 
@@ -47,30 +51,32 @@ def test_read_users(client):
 def test_read_users_with_users(client, user):
     user_schema = PublicUser.model_validate(user).model_dump()
     response = client.get('/user/')
-    assert response.json() == {'users': [user_schema]}
 
+    response_api = response.json()
 
-def test_update_user(client, user):
-    response = client.put(
-        url=f'/user/{user.id}',
-        json={
-            'email': 'testuser@gmail.com',
-            'username': 'armandomonsaotest',
-            'password': 'newpasswordtest',
-        },
-    )
-
-    assert response.status_code == HTTPStatus.OK
-    assert response.json() == {
-        'id': 1,
-        'email': 'testuser@gmail.com',
-        'username': 'armandomonsaotest',
+    assert {
+        'id': response_api['users'][0]['id'],
+        'email': response_api['users'][0]['email'],
+        'username': response_api['users'][0]['username'],
+        'created_at': response_api['users'][0]['created_at'],
+        'update_at': response_api['users'][0]['update_at'],
+    } == {
+        'id': user_schema['id'],
+        'email': user_schema['email'],
+        'username': user_schema['username'],
+        'created_at': datetime.strftime(
+            user_schema['created_at'], '%Y-%m-%dT%H:%M:%S'
+        ),
+        'update_at': datetime.strftime(
+            user_schema['update_at'], '%Y-%m-%dT%H:%M:%S'
+        ),
     }
 
 
-def test_update_404_error(client):
+def test_update_user(client, user, token):
     response = client.put(
-        url='/user/3',
+        url=f'/user/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'email': 'testuser@gmail.com',
             'username': 'armandomonsaotest',
@@ -78,7 +84,31 @@ def test_update_404_error(client):
         },
     )
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    response_api = client.get(url=f'/user/{user.id}')
+    response_user = response_api.json()
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'id': user.id,
+        'email': 'testuser@gmail.com',
+        'username': 'armandomonsaotest',
+        'created_at': response_user['created_at'],
+        'update_at': response_user['update_at'],
+    }
+
+
+def test_update_403_error(client, token):
+    response = client.put(
+        url='/user/3',
+        headers={'Authorization': f'Bearer {token}'},
+        json={
+            'email': 'testuser@gmail.com',
+            'username': 'armandomonsaotest',
+            'password': 'newpasswordtest',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 def test_post_already_exists_username(client, user):
@@ -109,9 +139,10 @@ def test_post_already_exists_email(client, user):
     assert response.json() == {'detail': 'Email already exists'}
 
 
-def test_update_integrity_error(client, user):
+def test_update_integrity_error(client, user, token):
     client.post(
         '/user',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'fausto',
             'email': 'fausto@example.com',
@@ -121,6 +152,7 @@ def test_update_integrity_error(client, user):
 
     response_update = client.put(
         f'/user/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'fausto',
             'email': 'bob@example.com',
@@ -134,22 +166,28 @@ def test_update_integrity_error(client, user):
     }
 
 
-def test_delete_user(client, user):
-    response = client.delete(url=f'/user/{user.id}')
+def test_delete_user(client, user, token):
+    response = client.delete(
+        url=f'/user/{user.id}', headers={'Authorization': f'Bearer {token}'}
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
 
 
-def test_delete_404_error(client):
-    response = client.delete(url='/user/3')
+def test_delete_404_error(client, token):
+    response = client.delete(
+        url='/user/3', headers={'Authorization': f'Bearer {token}'}
+    )
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail': 'User not found'}
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Not enough permissions'}
 
 
-def test_api_docs(client):
-    response = client.get(url='/docs')
+def test_api_docs(client, token):
+    response = client.get(
+        url='/docs', headers={'Authorization': f'Bearer {token}'}
+    )
 
     assert response.status_code == HTTPStatus.OK
 
@@ -163,11 +201,19 @@ def test_api_redoc(client):
 def test_get_by_id(client, user):
     response = client.get(url=f'/user/{user.id}')
 
+    user_schema = PublicUser.model_validate(user).model_dump()
+
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'id': 1,
         'email': 'teste@test.com',
         'username': 'Teste',
+        'created_at': datetime.strftime(
+            user_schema['created_at'], '%Y-%m-%dT%H:%M:%S'
+        ),
+        'update_at': datetime.strftime(
+            user_schema['update_at'], '%Y-%m-%dT%H:%M:%S'
+        ),
     }
 
 
@@ -176,3 +222,42 @@ def test_get_by_id_404(client):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
+
+
+def test_get_token(client, user):
+    response = client.post(
+        '/token',
+        data={
+            'username': user.email,
+            'password': getattr(user, 'clean_password'),
+        },
+    )
+    token = response.json()
+
+    assert response.status_code == HTTPStatus.OK
+    assert 'access_token' in token
+    assert 'token_type' in token
+
+def test_get_token_not_user(client, user):
+    response = client.post(
+        '/token',
+        data={
+            'username': 'email2@gmail.com',
+            'password': getattr(user, 'clean_password'),
+        },
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Incorrect email or password'}
+
+def test_get_token_invalid_password(client, user):
+    response = client.post(
+        '/token',
+        data={
+            'username': user.email,
+            'password': 'invalid-password'
+        }
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == { 'detail': 'Incorrect email or password' }
