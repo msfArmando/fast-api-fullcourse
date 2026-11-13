@@ -12,8 +12,8 @@ def test_get_by_id(client, user):
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'id': 1,
-        'email': 'teste@test.com',
-        'username': 'Teste',
+        'email': user.email,
+        'username': user.username,
         'created_at': datetime.strftime(
             user_schema['created_at'], '%Y-%m-%dT%H:%M:%S'
         ),
@@ -229,3 +229,26 @@ def test_get_token_invalid_password(client, user):
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
     assert response.json() == {'detail': 'Incorrect email or password'}
+
+def test_update_user_with_wrong_user(client, other_user, token):
+    response = client.put(
+        f'/user/{other_user.id}',
+        headers={'Authorization': f'Bearer {token}'},
+        json={
+            'username': 'bob',
+            'email': 'bob@example.com',
+            'password': 'mynewpassword'
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == { 'detail': 'Permission denied' }
+
+def test_delete_user_wrong_user(client, other_user, token):
+    response = client.delete(
+        f'/user/{other_user.id}',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json()

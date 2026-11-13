@@ -13,7 +13,7 @@ app.include_router(auth.router)
 
 
 @app.get('/docs', include_in_schema=False)
-def overridden_swagger():
+async def overridden_swagger():
     return get_swagger_ui_html(
         openapi_url='/openapi.json',
         title='Cursor - FastAP',
@@ -22,7 +22,7 @@ def overridden_swagger():
 
 
 @app.get('/redoc', include_in_schema=False)
-def overridden_redoc():
+async def overridden_redoc():
     return get_redoc_html(
         openapi_url='/openapi.json',
         title='Cursor - FastAPI',
@@ -31,5 +31,5 @@ def overridden_redoc():
 
 
 @app.get('/', status_code=HTTPStatus.OK, response_model=ReadRoot)
-def read_root():  # pragma: no cover
+async def read_root():  # pragma: no cover
     return {'message': 'Hello, World!'}

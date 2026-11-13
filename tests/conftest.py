@@ -15,6 +15,15 @@ from fast_zero.security import create_access_token, get_password_hash
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
+import factory
+
+class UserFactory(factory.Factory):
+    class Meta:
+        model = User
+
+    username = factory.Sequence(lambda n: f'test{n}')
+    email = factory.LazyAttribute(lambda obj: f'{obj.username}@test.com')
+    password = factory.LazyAttribute(lambda obj: f'{obj.username}@example.com')
 
 @contextmanager
 def _mock_db_time(*, model, time=datetime(2026, 1, 1)):
@@ -70,11 +79,8 @@ async def sessiontest():
 @pytest_asyncio.fixture
 async def user(sessiontest):
     password = 'testpassword'
-    user = User(
-        username='Teste',
-        email='teste@test.com',
-        password=get_password_hash(password),
-    )
+    user = UserFactory(password=get_password_hash(password))
+    
     sessiontest.add(user)
     await sessiontest.commit()
     await sessiontest.refresh(user)
@@ -83,6 +89,18 @@ async def user(sessiontest):
 
     return user
 
+@pytest_asyncio.fixture
+async def other_user(sessiontest):
+    password = 'testtest'
+    user = UserFactory(password=get_password_hash(password))
+
+    sessiontest.add(user)
+    await sessiontest.commit()
+    await sessiontest.refresh(user)
+
+    setattr(user, 'clean_password', password)
+
+    return user
 
 @pytest.fixture
 def token(client, user):
