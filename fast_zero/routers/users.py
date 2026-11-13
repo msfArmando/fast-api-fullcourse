@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast_zero.database import get_session
 from fast_zero.models import User
@@ -13,17 +14,18 @@ from fast_zero.security import get_current_user, get_password_hash
 
 router = APIRouter(prefix='/user', tags=['Users'])
 
-type SessionDp = Annotated[Session, Depends(get_session)]
-type CurrentUser = Annotated[Session, Depends(get_current_user)]
+type SessionDp = Annotated[AsyncSession, Depends(get_session)]
+type CurrentUser = Annotated[AsyncSession, Depends(get_current_user)]
 
 
 @router.get(path='/', status_code=HTTPStatus.OK, response_model=UserList)
-def get_users(
+async def get_users(
     session: SessionDp, filter_users: Annotated[FilterPage, Query()]
 ):
-    users = session.scalars(
+    query = await session.scalars(
         select(User).offset(filter_users.offset).limit(filter_users.limit)
-    ).all()
+    )
+    users = query.all()
 
     return {'users': users}
 
@@ -31,11 +33,11 @@ def get_users(
 @router.get(
     path='/{userid}', status_code=HTTPStatus.OK, response_model=PublicUser
 )
-def get_user(
+async def get_user(
     userid: int,
     session: SessionDp,
 ):
-    user = session.scalar(select(User).where(User.id == userid))
+    user = await session.scalar(select(User).where(User.id == userid))
 
     if user:
         return user
@@ -48,8 +50,8 @@ def get_user(
 @router.post(
     path='/', status_code=HTTPStatus.CREATED, response_model=PublicUser
 )
-def create_user(user: UserSchema, session: SessionDp):
-    db_user = session.scalar(
+async def create_user(user: UserSchema, session: SessionDp):
+    db_user = await session.scalar(
         select(User).where(
             (User.email == user.email) | (User.username == user.username)
         )
@@ -71,8 +73,8 @@ def create_user(user: UserSchema, session: SessionDp):
         )
 
         session.add(new_user)
-        session.commit()
-        session.refresh(new_user)
+        await session.commit()
+        await session.refresh(new_user)
 
         return new_user
 
@@ -80,7 +82,7 @@ def create_user(user: UserSchema, session: SessionDp):
 @router.put(
     path='/{userid}', status_code=HTTPStatus.OK, response_model=PublicUser
 )
-def update_user(
+async def update_user(
     userid: int,
     userschema: UserSchema,
     session: SessionDp,
@@ -96,26 +98,20 @@ def update_user(
         current_user.email = userschema.email
         current_user.password = get_password_hash(userschema.password)
 
-        session.commit()
-        session.refresh(current_user)
+        await session.commit()
+        await session.refresh(current_user)
 
         return current_user
-    except IntegrityError:
-        session.rollback()
+    except Exception:
+        await session.rollback()
         raise HTTPException(
             status_code=HTTPStatus.CONFLICT,
             detail='Username or Email already exists',
         )
-    except Exception as e:
-        session.rollback()
-        raise HTTPException(
-            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            detail=f'Internal error: {e}',
-        )
 
 
 @router.delete(path='/{userid}', status_code=HTTPStatus.OK)
-def delete_user(
+async def delete_user(
     userid: int,
     session: SessionDp,
     current_user: CurrentUser,
@@ -126,14 +122,7 @@ def delete_user(
             status_code=HTTPStatus.FORBIDDEN, detail='Not enough permissions'
         )
     else:
-        try:
-            session.delete(current_user)
-            session.commit()
+        await session.delete(current_user)
+        await session.commit()
 
-            return {'message': 'User deleted'}
-        except Exception as e:
-            session.rollback()
-            raise HTTPException(
-                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                detail=f'Internal server error: {e}',
-            )
+        return {'message': 'User deleted'}

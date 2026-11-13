@@ -31,5 +31,5 @@ def overridden_redoc():
 
 
 @app.get('/', status_code=HTTPStatus.OK, response_model=ReadRoot)
-def read_root():
+def read_root():  # pragma: no cover
     return {'message': 'Hello, World!'}

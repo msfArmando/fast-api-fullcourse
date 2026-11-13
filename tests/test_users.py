@@ -29,7 +29,6 @@ def test_get_by_id_404(client):
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
 
-
 def test_create_user(client):
     response = client.post(
         '/user',
@@ -53,12 +52,10 @@ def test_create_user(client):
         'update_at': response_user['update_at'],
     }
 
-
 def test_read_users(client):
     response = client.get('/user')
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'users': []}
-
 
 def test_read_users_with_users(client, user):
     user_schema = PublicUser.model_validate(user).model_dump()
