@@ -68,3 +68,6 @@ testreport = "poetry run coverage html --show-contexts"
 
 [tool.poe]
 poetry_command = ""
+
+[tool.typos.default]
+extend-ignore-identifiers-re = ["selectin"]

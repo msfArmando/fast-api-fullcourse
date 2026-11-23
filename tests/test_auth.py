@@ -1,4 +1,5 @@
 from http import HTTPStatus
+
 from freezegun import freeze_time
 
 
@@ -16,13 +17,14 @@ def test_get_token(client, user):
     assert 'access_token' in token
     assert 'token_type' in token
 
+
 def test_token_expired_after_time(client, user):
     with freeze_time('2026-11-13 12:00:00'):
         response = client.post(
             '/auth/token',
             data={
                 'username': user.email,
-                'password': getattr(user, 'clean_password')
+                'password': getattr(user, 'clean_password'),
             },
         )
         assert response.status_code == HTTPStatus.OK
@@ -41,6 +43,7 @@ def test_token_expired_after_time(client, user):
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert response.json() == {'detail': 'Could not validate credentials'}
 
+
 def test_token_inexistent_user(client):
     response = client.post(
         '/auth/token',
@@ -50,19 +53,20 @@ def test_token_inexistent_user(client):
     assert response.status_code == HTTPStatus.UNAUTHORIZED
     assert response.json() == {'detail': 'Incorrect email or password'}
 
+
 def test_token_wrong_password(client, user):
     response = client.post(
         '/auth/token',
-        data={'username': user.email, 'password': 'invalidpassword'}
+        data={'username': user.email, 'password': 'invalidpassword'},
     )
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
-    assert response.json() == { 'detail': 'Incorrect email or password' }
+    assert response.json() == {'detail': 'Incorrect email or password'}
+
 
 def test_refresh_token(client, user, token):
     response = client.post(
-        '/auth/refresh_token',
-        headers={'Authorization': f'Bearer {token}'}
+        '/auth/refresh_token', headers={'Authorization': f'Bearer {token}'}
     )
 
     data = response.json()
@@ -72,13 +76,14 @@ def test_refresh_token(client, user, token):
     assert 'token_type' in data
     assert data['token_type'] == 'bearer'
 
+
 def test_token_expired_dont_refresh(client, user):
     with freeze_time('2026-07-14 12:00:00'):
         response = client.post(
             '/auth/token',
             data={
                 'username': user.email,
-                'password': getattr(user, 'clean_password')
+                'password': getattr(user, 'clean_password'),
             },
         )
 
@@ -88,7 +93,7 @@ def test_token_expired_dont_refresh(client, user):
     with freeze_time('2026-07-14 12:31:00'):
         response = client.post(
             '/auth/refresh_token',
-            headers={ 'Authorization': f'Bearer {token}' },
+            headers={'Authorization': f'Bearer {token}'},
         )
 
         assert response.status_code == HTTPStatus.UNAUTHORIZED

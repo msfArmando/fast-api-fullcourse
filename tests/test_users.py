@@ -29,6 +29,7 @@ def test_get_by_id_404(client):
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
 
+
 def test_create_user(client):
     response = client.post(
         '/user',
@@ -52,10 +53,12 @@ def test_create_user(client):
         'update_at': response_user['update_at'],
     }
 
+
 def test_read_users(client):
     response = client.get('/user')
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'users': []}
+
 
 def test_read_users_with_users(client, user):
     user_schema = PublicUser.model_validate(user).model_dump()
@@ -148,22 +151,13 @@ def test_post_already_exists_email(client, user):
     assert response.json() == {'detail': 'Email already exists'}
 
 
-def test_update_integrity_error(client, user, token):
-    client.post(
-        '/user',
-        headers={'Authorization': f'Bearer {token}'},
-        json={
-            'username': 'fausto',
-            'email': 'fausto@example.com',
-            'password': 'secret',
-        },
-    )
+def test_update_integrity_error(client, user, other_user, token):
 
     response_update = client.put(
         f'/user/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
-            'username': 'fausto',
+            'username': other_user.username,
             'email': 'bob@example.com',
             'password': 'mynewpassword',
         },
@@ -230,6 +224,7 @@ def test_get_token_invalid_password(client, user):
     assert response.status_code == HTTPStatus.UNAUTHORIZED
     assert response.json() == {'detail': 'Incorrect email or password'}
 
+
 def test_update_user_with_wrong_user(client, other_user, token):
     response = client.put(
         f'/user/{other_user.id}',
@@ -237,12 +232,13 @@ def test_update_user_with_wrong_user(client, other_user, token):
         json={
             'username': 'bob',
             'email': 'bob@example.com',
-            'password': 'mynewpassword'
+            'password': 'mynewpassword',
         },
     )
 
     assert response.status_code == HTTPStatus.FORBIDDEN
-    assert response.json() == { 'detail': 'Permission denied' }
+    assert response.json() == {'detail': 'Permission denied'}
+
 
 def test_delete_user_wrong_user(client, other_user, token):
     response = client.delete(

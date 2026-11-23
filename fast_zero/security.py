@@ -1,20 +1,18 @@
 from datetime import datetime, timedelta
 from http import HTTPStatus
+from typing import Annotated
 
 from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-from jwt import DecodeError, decode, encode, ExpiredSignatureError
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jwt import DecodeError, ExpiredSignatureError, decode, encode
 from pwdlib import PasswordHash
 from pytz import timezone
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast_zero.database import get_session
 from fast_zero.models import User
 from fast_zero.settings import Settings
-
-from typing import Annotated
 
 settings = Settings()
 
@@ -43,12 +41,11 @@ def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/token', refreshUrl='auth/refresh')
-
+oauth2_schema = HTTPBearer()
 
 async def get_current_user(
     session: SessionDp,
-    token: str = Depends(oauth2_scheme),
+    token: HTTPAuthorizationCredentials = Depends(oauth2_schema),
 ):
     credentials_exception = HTTPException(
         status_code=HTTPStatus.UNAUTHORIZED,
@@ -58,7 +55,7 @@ async def get_current_user(
 
     try:
         payload = decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            token.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         subject_email = payload.get('sub')
 
@@ -69,7 +66,9 @@ async def get_current_user(
     except ExpiredSignatureError:
         raise credentials_exception
 
-    user = await session.scalar(select(User).where(User.email == subject_email))
+    user = await session.scalar(
+        select(User).where(User.email == subject_email)
+    )
 
     if not user:
         raise credentials_exception
